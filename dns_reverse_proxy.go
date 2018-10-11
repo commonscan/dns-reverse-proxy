@@ -27,28 +27,32 @@ import (
 	"syscall"
 
 	"github.com/miekg/dns"
+	"math/rand"
 )
 
 var (
-	address = flag.String("address", ":53", "Address to listen to (TCP and UDP)")
-
-	defaultServer = flag.String("default", "",
-		"Default DNS server where to send queries if no route matched (host:port)")
-
+	address   = flag.String("address", ":53", "Address to listen to (TCP and UDP)")
 	routeList = flag.String("route", "",
 		"List of routes where to send queries (domain=host:port)")
 	routes map[string]string
 
 	allowTransfer = flag.String("allow-transfer", "",
 		"List of IPs allowed to transfer (AXFR/IXFR)")
-	transferIPs []string
+	transferIPs  []string
+	publicServer = []string{"1.1.1.1:53", "8.8.8.8:53", "8.8.4.4:53", "209.244.0.3", "209.244.0.4", "64.6.64.6", "64.6.65.6",
+		"9.9.9.9:53", "149.112.112.112:53", "84.200.69.80:53", "84.200.70.40:53", "8.26.56.26:53", "8.20.247.20:53", "208.67.222.222:53",
+		"208.67.220.220", "199.85.126.10:53", "199.85.127.10:53", "81.218.119.11:53", "209.88.198.133:53", "195.46.39.39:53", "195.46.39.40:53",
+		"69.195.152.204:53", "23.94.60.240:53", "208.76.50.50:53", "208.76.51.51:53", "216.146.35.35:53", "216.146.36.36:53",
+		"37.235.1.174:53", "37.235.1.177:53", "198.101.242.72:53", "23.253.163.53:53", "77.88.8.8:53", "77.88.8.1:53", "91.239.100.100:53",
+	}
 )
 
+func randomPublicServer() string {
+	return publicServer[rand.Intn(len(publicServer))]
+
+}
 func main() {
 	flag.Parse()
-	if !validHostPort(*defaultServer) {
-		log.Fatal("-default is required, must be valid host:port")
-	}
 	transferIPs = strings.Split(*allowTransfer, ",")
 	routes = make(map[string]string)
 	if *routeList != "" {
@@ -106,7 +110,8 @@ func route(w dns.ResponseWriter, req *dns.Msg) {
 			return
 		}
 	}
-	proxy(*defaultServer, w, req)
+	var dnsServer = randomPublicServer()
+	proxy(dnsServer, w, req)
 }
 
 func isTransfer(req *dns.Msg) bool {
